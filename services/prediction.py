@@ -1,54 +1,118 @@
+import copy
 import os
 
 import numpy as np
 import torch
 import torch.backends.cudnn
+from sklearn.model_selection import GridSearchCV
+from sklearn.svm import SVR
 from torch.autograd.variable import Variable
 
 from metadata.ITrackerModel import ITrackerModel
 
+
+def load_checkpoint(filename):
+    checkpoint = os.path.join(CHECKPOINTS_PATH, filename)
+
+    if not os.path.isfile(checkpoint):
+        return None
+    else:
+        return torch.load(checkpoint, map_location='cpu')
+
+
+def initialize_model(model, filename):
+    # model = torch.nn.DataParallel(model)
+    # model.cuda()
+    # torch.backends.cudnn.benchmark = True
+    checkpoint = load_checkpoint(filename)
+
+    if checkpoint:
+        state = checkpoint['state_dict']
+        try:
+            model.module.load_state_dict(state)
+        except:
+            model.load_state_dict(state)
+    else:
+        print('Warning: Could not read checkpoint!')
+
+
+def extract_feature(val_loader, model):
+    feature_extraction_model = copy.deepcopy(model)
+    new_fc = torch.nn.Sequential(*list(model.fc.children())[:-1])
+    feature_extraction_model.fc = new_fc
+
+    # switch to evaluate mode
+    model.eval()
+
+    feature_list = list()
+    act_list = list()
+    for local_batch, local_labels in val_loader:
+        # imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        # imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        # imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        # faceGrid = (local_batch[3]).to(DEVICE).float().cuda()
+        # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
+        imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
+        imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
+        imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
+        faceGrid = (local_batch[3]).to(DEVICE).float()
+        gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
+
+        imFace = Variable(imFace, requires_grad=False)
+        imEyeL = Variable(imEyeL, requires_grad=False)
+        imEyeR = Variable(imEyeR, requires_grad=False)
+        faceGrid = Variable(faceGrid, requires_grad=False)
+        gaze = Variable(gaze, requires_grad=False)
+
+        # compute output
+        with torch.no_grad():
+            output = feature_extraction_model(imFace, imEyeL, imEyeR, faceGrid)
+
+        feature_list.append(output.cpu().numpy())
+        act_list.append(gaze.cpu().numpy())
+    features = np.concatenate(feature_list)
+    y = np.concatenate(act_list)
+
+    return features, y
+
+
 CHECKPOINTS_PATH = 'metadata'
-DEVICE = torch.device("cuda:0")
+# DEVICE = torch.device('cuda:0')
+DEVICE = torch.device('cpu')
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
+MODEL = ITrackerModel()
+initialize_model(MODEL, 'checkpoint.pth.tar')
+REGRO = None
+REGR1 = None
 
 
 class Predictor:
     @staticmethod
-    def predict(test_generator):
-        model = ITrackerModel()
-        Predictor.__initialize_model(model, 'checkpoint.pth.tar')
-        criterion = torch.nn.MSELoss().cuda()
+    def svr_predict(test_generator):
+        global REGRO, REGR1
 
-        predictions, y = Predictor.__process_predict(test_generator, model, criterion)
+        if REGRO is None and REGR1 is None:
+            return 'Please calibrate before using the SVR prediction'
+
+        features, y = extract_feature(test_generator, MODEL)
+        preds = np.zeros((len(y[:, 0]), 2))
+        preds[:, 0] = REGRO.predict(features)
+
+        features, y = extract_feature(test_generator, MODEL)
+        preds[:, 1] = REGR1.predict(features)
+
+        return preds, y
+
+    @staticmethod
+    def predict(test_generator):
+        # criterion = torch.nn.MSELoss().cuda()
+        criterion = torch.nn.MSELoss()
+
+        predictions, y = Predictor.__process_predict(test_generator, MODEL, criterion)
 
         feature_error_list = Predictor.__calculate_xy_error(predictions[:, 0], y[:, 1], predictions[:, 1])
 
         return 'Fine-tuned new base for meta-learning: ' + str(np.mean(feature_error_list))
-
-    @staticmethod
-    def __initialize_model(model, filename):
-        model = torch.nn.DataParallel(model)
-        model.cuda()
-        torch.backends.cudnn.benchmark = True
-        checkpoint = Predictor.__load_checkpoint(filename)
-
-        if checkpoint:
-            state = checkpoint['state_dict']
-            try:
-                model.module.load_state_dict(state)
-            except:
-                model.load_state_dict(state)
-        else:
-            print('Warning: Could not read checkpoint!')
-
-    @staticmethod
-    def __load_checkpoint(filename):
-        checkpoint = os.path.join(CHECKPOINTS_PATH, filename)
-
-        if not os.path.isfile(checkpoint):
-            return None
-        else:
-            return torch.load(checkpoint, map_location='cpu')
 
     @staticmethod
     def __process_predict(val_loader, model, criterion):
@@ -61,11 +125,16 @@ class Predictor:
         act_list = list()
 
         for local_batch, local_labels in val_loader:
-            image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            face_grid = (local_batch[3]).to(DEVICE).float().cuda()
-            gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
+            # image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            # image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            # image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            # face_grid = (local_batch[3]).to(DEVICE).float().cuda()
+            # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
+            image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
+            image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
+            image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
+            face_grid = (local_batch[3]).to(DEVICE).float()
+            gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
             image_face = Variable(image_face, requires_grad=False)
             image_left_eye = Variable(image_left_eye, requires_grad=False)
@@ -101,6 +170,34 @@ class Predictor:
         error = (error_x + error_y) ** 0.5
 
         return error
+
+
+class Calibrator:
+    @staticmethod
+    def calibrate(training_generator, validation_generator):
+        global REGRO, REGR1
+
+        train_length = 5
+        valid_length = 4
+
+        search_range = [10.0 ** i for i in np.arange(-4, 5)]
+        tuned_parameters = [{'kernel': ['rbf'], 'gamma': search_range, 'C': search_range},
+                            {'kernel': ['linear'], 'C': search_range}]
+        regr = SVR()
+
+        features1, y1 = extract_feature(training_generator, MODEL)
+        features2, y2 = extract_feature(validation_generator, MODEL)
+
+        features = np.concatenate([features1, features2], axis=0)
+        y = np.concatenate([y1, y2], axis=0)
+
+        REGRO = GridSearchCV(regr, tuned_parameters,
+                             cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
+        REGRO.fit(features, y[:, 0])
+
+        REGR1 = GridSearchCV(regr, tuned_parameters,
+                             cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
+        REGR1.fit(features, y[:, 1])
 
 
 class AverageMeter(object):

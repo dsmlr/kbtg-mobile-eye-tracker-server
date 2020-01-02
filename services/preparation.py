@@ -25,7 +25,7 @@ def _get_lreg(metadata_path):
     return lreg
 
 
-METADATA_PATH = 'metadata'
+METADATA_PATH = './metadata'
 FACE_MEAN = _load_metadata(os.path.join(METADATA_PATH, 'mean_face_224.mat'))
 LEFT_EYE_MEAN = _load_metadata(os.path.join(METADATA_PATH, 'mean_left_224.mat'))
 RIGHT_EYE_MEAN = _load_metadata(os.path.join(METADATA_PATH, 'mean_right_224.mat'))
@@ -33,11 +33,42 @@ DETECTOR = dlib.get_frontal_face_detector()
 PREDICTOR = dlib.shape_predictor(os.path.join(METADATA_PATH, 'shape_predictor_68_face_landmarks.dat'))
 LREG = _get_lreg(METADATA_PATH)
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
+VALIDATION_POINTS = ['56,720', '360,56', '664,720', '360,1384']
+TRAINING_POINTS = ['56,56', '664,56', '360,720', '56,1384', '664,1384']
 DATA_FRAME = None
 FRAMES = list()
 
 
 class Extractor:
+    @staticmethod
+    def get_dataset_for_calibration(images, x_positions, y_positions):
+        global DATA_FRAME, FRAMES
+
+        data_frame = pd.DataFrame([
+            {'time': 0, 'x': 0, 'y': 0, 'radius': 0, 'xPos': x_positions[i], 'yPos': y_positions[i], 'idx_frame': i,
+             'concat_xy': '{},{}'.format(x_positions[i], y_positions[i]), 'u_idx': 0}
+            for i in range(len(images))])
+        data_frame = data_frame.reset_index()
+
+        labels = dict()
+        for i in range(len(data_frame)):
+            row = data_frame.iloc[i, :]
+            labels[row['index']] = [row['xPos'], row['yPos']]
+
+        DATA_FRAME = data_frame
+        FRAMES = images
+
+        training_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(TRAINING_POINTS)), :]
+        validation_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(VALIDATION_POINTS)), :]
+
+        validation_set = Dataset(validation_data_frame['index'].values, labels)
+        validation_generator = data.DataLoader(validation_set, **PARAMS)
+
+        training_set = Dataset(training_data_frame['index'].values, labels)
+        training_generator = data.DataLoader(training_set, **PARAMS)
+
+        return training_generator, validation_generator
+
     @staticmethod
     def extract_frames_from_video(video_path):
         global DATA_FRAME, FRAMES
@@ -153,7 +184,7 @@ class Dataset(data.Dataset):
 
             return output
         except:
-            print("Detection Failed")
+            print('Detection Failed')
 
             return Dataset.__empty_numpy_array()
 

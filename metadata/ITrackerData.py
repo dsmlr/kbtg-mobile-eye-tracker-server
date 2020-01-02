@@ -1,12 +1,12 @@
-import torch.utils.data as data
-import scipy.io as sio
-from PIL import Image
 import os
 import os.path
-import torchvision.transforms as transforms
-import torch
+
 import numpy as np
-import re
+import scipy.io as sio
+import torch
+import torch.utils.data as data
+import torchvision.transforms as transforms
+from PIL import Image
 
 '''
 Data loader for the iTracker.
@@ -33,7 +33,8 @@ Booktitle = {IEEE Conference on Computer Vision and Pattern Recognition (CVPR)}
 
 MEAN_PATH = './'
 
-def loadMetadata(filename, silent = False):
+
+def loadMetadata(filename, silent=False):
     try:
         # http://stackoverflow.com/questions/6273634/access-array-contents-from-a-mat-file-loaded-using-scipy-io-loadmat-python
         if not silent:
@@ -43,6 +44,7 @@ def loadMetadata(filename, silent = False):
         print('\tFailed to read the meta file "%s"!' % filename)
         return None
     return metadata
+
 
 class SubtractMean(object):
     """Normalize an tensor image with mean.
@@ -57,12 +59,12 @@ class SubtractMean(object):
             tensor (Tensor): Tensor image of size (C, H, W) to be normalized.
         Returns:
             Tensor: Normalized image.
-        """       
+        """
         return tensor.sub(self.meanImg)
 
 
 class ITrackerData(data.Dataset):
-    def __init__(self, dataPath, split = 'train', imSize=(224,224), gridSize=(25, 25)):
+    def __init__(self, dataPath, split='train', imSize=(224, 224), gridSize=(25, 25)):
 
         self.dataPath = dataPath
         self.imSize = imSize
@@ -70,7 +72,7 @@ class ITrackerData(data.Dataset):
 
         print('Loading iTracker dataset...')
         metaFile = os.path.join(dataPath, 'metadata.mat')
-        #metaFile = 'metadata.mat'
+        # metaFile = 'metadata.mat'
         if metaFile is None or not os.path.isfile(metaFile):
             raise RuntimeError('There is no such file %s! Provide a valid dataset path.' % metaFile)
         self.metadata = loadMetadata(metaFile)
@@ -80,7 +82,7 @@ class ITrackerData(data.Dataset):
         self.faceMean = loadMetadata(os.path.join(MEAN_PATH, 'mean_face_224.mat'))['image_mean']
         self.eyeLeftMean = loadMetadata(os.path.join(MEAN_PATH, 'mean_left_224.mat'))['image_mean']
         self.eyeRightMean = loadMetadata(os.path.join(MEAN_PATH, 'mean_right_224.mat'))['image_mean']
-        
+
         self.transformFace = transforms.Compose([
             transforms.Resize(self.imSize),
             transforms.ToTensor(),
@@ -97,7 +99,6 @@ class ITrackerData(data.Dataset):
             SubtractMean(meanImg=self.eyeRightMean),
         ])
 
-
         if split == 'test':
             mask = self.metadata['labelTest']
         elif split == 'val':
@@ -105,7 +106,7 @@ class ITrackerData(data.Dataset):
         else:
             mask = self.metadata['labelTrain']
 
-        self.indices = np.argwhere(mask)[:,0]
+        self.indices = np.argwhere(mask)[:, 0]
         print('Loaded iTracker dataset split "%s" with %d records...' % (split, len(self.indices)))
 
     def loadImage(self, path):
@@ -113,19 +114,18 @@ class ITrackerData(data.Dataset):
             im = Image.open(path).convert('RGB')
         except OSError:
             raise RuntimeError('Could not read image: ' + path)
-            #im = Image.new("RGB", self.imSize, "white")
+            # im = Image.new("RGB", self.imSize, "white")
 
         return im
 
-
     def makeGrid(self, params):
         gridLen = self.gridSize[0] * self.gridSize[1]
-        grid = np.zeros([gridLen,], np.float32)
-        
+        grid = np.zeros([gridLen, ], np.float32)
+
         indsY = np.array([i // self.gridSize[0] for i in range(gridLen)])
         indsX = np.array([i % self.gridSize[0] for i in range(gridLen)])
-        condX = np.logical_and(indsX >= params[0], indsX < params[0] + params[2]) 
-        condY = np.logical_and(indsY >= params[1], indsY < params[1] + params[3]) 
+        condX = np.logical_and(indsX >= params[0], indsX < params[0] + params[2])
+        condY = np.logical_and(indsY >= params[1], indsY < params[1] + params[3])
         cond = np.logical_and(condX, condY)
 
         grid[cond] = 1
@@ -134,9 +134,12 @@ class ITrackerData(data.Dataset):
     def __getitem__(self, index):
         index = self.indices[index]
 
-        imFacePath = os.path.join(self.dataPath, '%05d/appleFace/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
-        imEyeLPath = os.path.join(self.dataPath, '%05d/appleLeftEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
-        imEyeRPath = os.path.join(self.dataPath, '%05d/appleRightEye/%05d.jpg' % (self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+        imFacePath = os.path.join(self.dataPath, '%05d/appleFace/%05d.jpg' % (
+        self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+        imEyeLPath = os.path.join(self.dataPath, '%05d/appleLeftEye/%05d.jpg' % (
+        self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
+        imEyeRPath = os.path.join(self.dataPath, '%05d/appleRightEye/%05d.jpg' % (
+        self.metadata['labelRecNum'][index], self.metadata['frameIndex'][index]))
 
         imFace = self.loadImage(imFacePath)
         imEyeL = self.loadImage(imEyeLPath)
@@ -148,7 +151,7 @@ class ITrackerData(data.Dataset):
 
         gaze = np.array([self.metadata['labelDotXCam'][index], self.metadata['labelDotYCam'][index]], np.float32)
 
-        faceGrid = self.makeGrid(self.metadata['labelFaceGrid'][index,:])
+        faceGrid = self.makeGrid(self.metadata['labelFaceGrid'][index, :])
 
         # to tensor
         row = torch.LongTensor([int(index)])
@@ -156,7 +159,6 @@ class ITrackerData(data.Dataset):
         gaze = torch.FloatTensor(gaze)
 
         return row, imFace, imEyeL, imEyeR, faceGrid, gaze
-    
-        
+
     def __len__(self):
         return len(self.indices)

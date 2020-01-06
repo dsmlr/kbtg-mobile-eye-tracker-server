@@ -12,22 +12,22 @@ from metadata.ITrackerModel import ITrackerModel
 
 
 def load_checkpoint(filename):
-    checkpoint = os.path.join(CHECKPOINTS_PATH, filename)
+    filename = os.path.join(CHECKPOINTS_PATH, filename)
 
-    if not os.path.isfile(checkpoint):
+    if not os.path.isfile(filename):
         return None
     else:
-        return torch.load(checkpoint, map_location='cpu')
+        return torch.load(filename, map_location='cpu')
 
 
 def initialize_model(model, filename):
-    # model = torch.nn.DataParallel(model)
+    model = torch.nn.DataParallel(model)
     # model.cuda()
     # torch.backends.cudnn.benchmark = True
-    checkpoint = load_checkpoint(filename)
+    saved = load_checkpoint(filename)
 
-    if checkpoint:
-        state = checkpoint['state_dict']
+    if saved:
+        state = saved['state_dict']
         try:
             model.module.load_state_dict(state)
         except:
@@ -56,6 +56,7 @@ def extract_feature(val_loader, model):
         imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
         imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
         faceGrid = (local_batch[3]).to(DEVICE).float()
+
         gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
         imFace = Variable(imFace, requires_grad=False)
@@ -81,7 +82,7 @@ CHECKPOINTS_PATH = 'metadata'
 DEVICE = torch.device('cpu')
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
 MODEL = ITrackerModel()
-initialize_model(MODEL, 'checkpoint.pth.tar')
+initialize_model(MODEL, 'check_point_1.pth.tar')
 REGRO = None
 REGR1 = None
 
@@ -101,7 +102,9 @@ class Predictor:
         features, y = extract_feature(test_generator, MODEL)
         preds[:, 1] = REGR1.predict(features)
 
-        return preds, y
+        svr_error_list = Predictor.__calculate_xy_error(y[:, 0], preds[:, 0], y[:, 1], preds[:, 1])
+
+        return 'SVR prediction loss: ' + str(np.mean(svr_error_list))
 
     @staticmethod
     def predict(test_generator):
@@ -110,9 +113,9 @@ class Predictor:
 
         predictions, y = Predictor.__process_predict(test_generator, MODEL, criterion)
 
-        feature_error_list = Predictor.__calculate_xy_error(predictions[:, 0], y[:, 1], predictions[:, 1])
+        feature_error_list = Predictor.__calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
 
-        return 'Fine-tuned new base for meta-learning: ' + str(np.mean(feature_error_list))
+        return 'Normal prediction loss: ' + str(np.mean(feature_error_list))
 
     @staticmethod
     def __process_predict(val_loader, model, criterion):

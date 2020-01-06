@@ -32,7 +32,8 @@ RIGHT_EYE_MEAN = _load_metadata(os.path.join(METADATA_PATH, 'mean_right_224.mat'
 DETECTOR = dlib.get_frontal_face_detector()
 PREDICTOR = dlib.shape_predictor(os.path.join(METADATA_PATH, 'shape_predictor_68_face_landmarks.dat'))
 LREG = _get_lreg(METADATA_PATH)
-PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
+# PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
+PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 0}
 VALIDATION_POINTS = ['56,720', '360,56', '664,720', '360,1384']
 TRAINING_POINTS = ['56,56', '664,56', '360,720', '56,1384', '664,1384']
 DATA_FRAME = None
@@ -44,10 +45,21 @@ class Extractor:
     def get_dataset_for_calibration(images, x_positions, y_positions):
         global DATA_FRAME, FRAMES
 
+        decoded_images = list()
+
+        for image in images:
+            numpy_image = np.fromstring(image.read(), np.uint8)
+            decoded_image = cv2.imdecode(numpy_image, cv2.IMREAD_UNCHANGED)
+            decoded_images.append(decoded_image)
+
         data_frame = pd.DataFrame([
-            {'time': 0, 'x': 0, 'y': 0, 'radius': 0, 'xPos': x_positions[i], 'yPos': y_positions[i], 'idx_frame': i,
-             'concat_xy': '{},{}'.format(x_positions[i], y_positions[i]), 'u_idx': 0}
+            {'time': 0, 'x': x_positions[i], 'y': y_positions[i], 'radius': 56, 'idx_frame': i, 'u_idx': 0}
             for i in range(len(images))])
+
+        data_frame['xPos'] = (data_frame['x'].astype(float) / 111.282844) - 1.82
+        data_frame['yPos'] = -(data_frame['y'].astype(float) / 111.196911) - 0.28
+        data_frame['concat_xy'] = data_frame['x'].astype(str).str.cat(data_frame['y'].astype(str), sep=",")
+
         data_frame = data_frame.reset_index()
 
         labels = dict()
@@ -56,10 +68,12 @@ class Extractor:
             labels[row['index']] = [row['xPos'], row['yPos']]
 
         DATA_FRAME = data_frame
-        FRAMES = images
+        FRAMES = decoded_images
 
         training_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(TRAINING_POINTS)), :]
         validation_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(VALIDATION_POINTS)), :]
+
+        print(DATA_FRAME)
 
         validation_set = Dataset(validation_data_frame['index'].values, labels)
         validation_generator = data.DataLoader(validation_set, **PARAMS)
@@ -141,7 +155,7 @@ class Dataset(data.Dataset):
         label_id = self.list_id[index]
 
         # Load data and get label
-        row = DATA_FRAME.iloc[id, :]
+        row = DATA_FRAME.iloc[label_id, :]
         image = FRAMES[row['idx_frame']]
 
         segmented = Dataset.__create_image_segment(image)
@@ -230,8 +244,8 @@ class Dataset(data.Dataset):
 
         x_left = np.expand_dims([(left_eye_x[1] - left_eye_x[0]) / (left_eye_y[1] - left_eye_y[0])], axis=1)
 
-        c_eye_left_height = LREG['lr_eye_left_h'].__process_predict(x_left)
-        c_eye_left_width = LREG['lr_eye_left_w'].__process_predict(x_left)
+        c_eye_left_height = LREG['lr_eye_left_h'].predict(x_left)
+        c_eye_left_width = LREG['lr_eye_left_w'].predict(x_left)
 
         left_margin_y = int(((left_eye_y[1] - left_eye_y[0]) * c_eye_left_height - (left_eye_y[1] - left_eye_y[0])) / 2)
         left_margin_x = int(((left_eye_x[1] - left_eye_x[0]) * c_eye_left_width - (left_eye_x[1] - left_eye_x[0])) / 2)
@@ -249,8 +263,8 @@ class Dataset(data.Dataset):
 
         x_right = np.expand_dims([(right_eye_x[1] - right_eye_x[0]) / (right_eye_y[1] - right_eye_y[0])], axis=1)
 
-        c_eye_right_height = LREG['lr_eye_right_h'].__process_predict(x_right)
-        c_eye_right_width = LREG['lr_eye_right_w'].__process_predict(x_right)
+        c_eye_right_height = LREG['lr_eye_right_h'].predict(x_right)
+        c_eye_right_width = LREG['lr_eye_right_w'].predict(x_right)
 
         right_margin_y = int(
             ((right_eye_y[1] - right_eye_y[0]) * c_eye_right_height - (right_eye_y[1] - right_eye_y[0])) / 2)

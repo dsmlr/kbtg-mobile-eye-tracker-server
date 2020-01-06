@@ -28,18 +28,18 @@ def calibrate():
     return {'message': 'Upload Successfully'}, 200
 
 
-# @app.route('/save-screen-video', methods=['POST'])
-# def save_screen_video():
-#     if 'video[]' not in request.files:
-#         return {'message': 'No video in the request'}, 400
-#
-#     videos = request.files.getlist('video[]')
-#
-#     screen_video = videos[0]
-#     screen_video_filename = secure_filename(screen_video.filename)
-#     screen_video.save(os.path.join(app.config['UPLOAD_FOLDER'], screen_video_filename))
-#
-#     return {'message': 'Upload Successfully'}, 200
+@app.route('/save-screen-video', methods=['POST'])
+def save_screen_video():
+    # if 'video[]' not in request.files:
+    #     return {'message': 'No video in the request'}, 400
+    #
+    # videos = request.files.getlist('video[]')
+    #
+    # screen_video = videos[0]
+    # screen_video_filename = secure_filename(screen_video.filename)
+    # screen_video.save(os.path.join(app.config['UPLOAD_FOLDER'], screen_video_filename))
+
+    return {'message': 'Upload Successfully'}, 200
 
 
 @app.route('/predict', methods=['POST'])

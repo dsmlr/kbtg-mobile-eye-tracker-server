@@ -93,18 +93,17 @@ class Predictor:
         global REGRO, REGR1
 
         if REGRO is None and REGR1 is None:
-            return 'Please calibrate before using the SVR prediction'
+            print('Please calibrate before using the SVR prediction')
+            return None
 
         features, y = extract_feature(test_generator, MODEL)
-        preds = np.zeros((len(y[:, 0]), 2))
-        preds[:, 0] = REGRO.predict(features)
+        predictions = np.zeros((len(y[:, 0]), 2))
+        predictions[:, 0] = REGRO.predict(features)
 
         features, y = extract_feature(test_generator, MODEL)
-        preds[:, 1] = REGR1.predict(features)
+        predictions[:, 1] = REGR1.predict(features)
 
-        svr_error_list = Predictor.__calculate_xy_error(y[:, 0], preds[:, 0], y[:, 1], preds[:, 1])
-
-        return 'SVR prediction loss: ' + str(np.mean(svr_error_list))
+        return predictions
 
     @staticmethod
     def predict(test_generator):
@@ -113,9 +112,7 @@ class Predictor:
 
         predictions, y = Predictor.__process_predict(test_generator, MODEL, criterion)
 
-        feature_error_list = Predictor.__calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
-
-        return 'Normal prediction loss: ' + str(np.mean(feature_error_list))
+        return predictions
 
     @staticmethod
     def __process_predict(val_loader, model, criterion):

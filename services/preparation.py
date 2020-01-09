@@ -45,6 +45,8 @@ class Extractor:
     def get_dataset_for_calibration(images, x_positions, y_positions):
         global DATA_FRAME, FRAMES
 
+        DATA_FRAME = None
+        FRAMES = list()
         decoded_images = list()
 
         for image in images:
@@ -58,7 +60,7 @@ class Extractor:
 
         data_frame['xPos'] = (data_frame['x'].astype(float) / 111.282844) - 1.82
         data_frame['yPos'] = -(data_frame['y'].astype(float) / 111.196911) - 0.28
-        data_frame['concat_xy'] = data_frame['x'].astype(str).str.cat(data_frame['y'].astype(str), sep=",")
+        data_frame['concat_xy'] = data_frame['x'].astype(str).str.cat(data_frame['y'].astype(str), sep=',')
 
         data_frame = data_frame.reset_index()
 
@@ -87,9 +89,15 @@ class Extractor:
     def extract_frames_from_video(video_path):
         global DATA_FRAME, FRAMES
 
+        DATA_FRAME = None
+        FRAMES = list()
         frames = list()
 
         video = cv2.VideoCapture(video_path)
+
+        number_of_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
+        print('Number of frames of predicted video: ' + str(number_of_frames))
+
         rotate_code = Extractor.__check_rotation(video_path)
 
         while video.isOpened():

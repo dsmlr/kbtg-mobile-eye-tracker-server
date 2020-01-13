@@ -191,6 +191,17 @@ class Calibrator:
         features = np.concatenate([features1, features2], axis=0)
         y = np.concatenate([y1, y2], axis=0)
 
+        print("______________________________________")
+        print("y1")
+        print(y1)
+        print("______________________________________")
+        print("y2")
+        print(y2)
+        print("______________________________________")
+        print("features")
+        print(np.sum(features, axis=1))
+        print("______________________________________")
+
         REGRO = GridSearchCV(regr, tuned_parameters,
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGRO.fit(features, y[:, 0])
@@ -198,6 +209,31 @@ class Calibrator:
         REGR1 = GridSearchCV(regr, tuned_parameters,
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGR1.fit(features, y[:, 1])
+
+        print("REGR0")
+        print(REGRO.best_estimator_)
+        print("______________________________________")
+        print("REGR1")
+        print(REGR1.best_estimator_)
+
+        features, y = extract_feature(training_generator, MODEL)
+        predictions = np.zeros((len(y[:, 0]), 2))
+        predictions[:, 0] = REGRO.predict(features)
+        predictions[:, 1] = REGR1.predict(features)
+
+        print("______________________________________")
+        print("predictions training_generator")
+        print(predictions)
+
+        features, y = extract_feature(validation_generator, MODEL)
+        predictions = np.zeros((len(y[:, 0]), 2))
+        predictions[:, 0] = REGRO.predict(features)
+        predictions[:, 1] = REGR1.predict(features)
+
+        print("______________________________________")
+        print("predictions validation_generator")
+        print(predictions)
+
 
 
 class AverageMeter(object):

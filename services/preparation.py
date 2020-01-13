@@ -47,12 +47,18 @@ class Extractor:
 
         DATA_FRAME = None
         FRAMES = list()
-        decoded_images = list()
+        ready_to_use_images = list()
+
+        c = 0
 
         for image in images:
+            c += 1
             numpy_image = np.fromstring(image.read(), np.uint8)
             decoded_image = cv2.imdecode(numpy_image, cv2.IMREAD_UNCHANGED)
-            decoded_images.append(decoded_image)
+            # ready_to_use_images.append(decoded_image)
+            rotated_image = cv2.rotate(decoded_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
+            ready_to_use_images.append(rotated_image)
+            cv2.imwrite(str(c) + ".jpg", rotated_image)
 
         data_frame = pd.DataFrame([
             {'time': 0, 'x': x_positions[i], 'y': y_positions[i], 'radius': 56, 'idx_frame': i, 'u_idx': 0}
@@ -70,7 +76,7 @@ class Extractor:
             labels[row['index']] = [row['xPos'], row['yPos']]
 
         DATA_FRAME = data_frame
-        FRAMES = decoded_images
+        FRAMES = ready_to_use_images
 
         training_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(TRAINING_POINTS)), :]
         validation_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(VALIDATION_POINTS)), :]
@@ -145,6 +151,7 @@ class Extractor:
         return cv2.rotate(frame, rotate_code)
 
 
+
 class Dataset(data.Dataset):
     """Characterizes a dataset for PyTorch"""
 
@@ -187,6 +194,7 @@ class Dataset(data.Dataset):
 
         if len(detected_rectangle) == 0:
             # no component is detected
+            print("Failed")
             return Dataset.__empty_numpy_array(image)
 
         rectangle, face_boundary_box = Dataset.__find_largest_face(detected_rectangle)
@@ -203,6 +211,8 @@ class Dataset(data.Dataset):
                       cv2.cvtColor(roi_left_eye, cv2.COLOR_BGR2RGB),
                       cv2.cvtColor(roi_right_eye, cv2.COLOR_BGR2RGB),
                       np.reshape(cv2.resize(face_grid, (25, 25)), -1)]
+
+            cv2.imwrite()
 
             return output
         except:

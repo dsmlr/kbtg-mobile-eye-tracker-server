@@ -1,6 +1,7 @@
 import os
 
-from flask import Flask, request
+from flask import Flask, render_template
+from flask import request
 from werkzeug.utils import secure_filename
 
 from services.prediction import Calibrator, Predictor
@@ -10,11 +11,16 @@ from services.video_processor import VideoProcessor
 FACES_FOLDER = './faces'
 SCREENS_FOLDER = './screens'
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder='result')
 app.config['FACES_FOLDER'] = FACES_FOLDER
 app.config['SCREENS_FOLDER'] = SCREENS_FOLDER
 
 SCREEN_VIDEO_PATH = None
+
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 
 @app.route('/calibrate', methods=['POST'])
@@ -25,6 +31,8 @@ def calibrate():
     images = request.files.getlist('image[]')
     x_positions = request.form.get('xPositions').split(',')
     y_positions = request.form.get('yPositions').split(',')
+
+    print(x_positions, y_positions)
 
     training_generator, validation_generator = Extractor.get_dataset_for_calibration(images, x_positions, y_positions)
 

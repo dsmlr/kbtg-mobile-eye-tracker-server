@@ -32,37 +32,48 @@ RIGHT_EYE_MEAN = _load_metadata(os.path.join(METADATA_PATH, 'mean_right_224.mat'
 DETECTOR = dlib.get_frontal_face_detector()
 PREDICTOR = dlib.shape_predictor(os.path.join(METADATA_PATH, 'shape_predictor_68_face_landmarks.dat'))
 LREG = _get_lreg(METADATA_PATH)
-# PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
-PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 0}
+PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
+# PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 0}
 VALIDATION_POINTS = ['56,720', '360,56', '664,720', '360,1384']
 TRAINING_POINTS = ['56,56', '664,56', '360,720', '56,1384', '664,1384']
+FRAME_RANGE_LIST = [(64, 90), (97, 123), (130, 156), (163, 189), (196, 222), (229, 255), (262, 288), (295, 321),
+                    (328, 354)]
 DATA_FRAME = None
 FRAMES = list()
 
 
 class Extractor:
     @staticmethod
-    def get_dataset_for_calibration(images, x_positions, y_positions):
+    def get_dataset_for_calibration(calibrate_video_path, x_positions, y_positions):
         global DATA_FRAME, FRAMES
 
         DATA_FRAME = None
         FRAMES = list()
-        ready_to_use_images = list()
+        frames = list()
 
-        c = 0
+        video = cv2.VideoCapture(calibrate_video_path)
 
-        for image in images:
-            c += 1
-            numpy_image = np.fromstring(image.read(), np.uint8)
-            decoded_image = cv2.imdecode(numpy_image, cv2.IMREAD_UNCHANGED)
-            # ready_to_use_images.append(decoded_image)
-            rotated_image = cv2.rotate(decoded_image, cv2.ROTATE_90_COUNTERCLOCKWISE)
-            ready_to_use_images.append(rotated_image)
-            cv2.imwrite(str(c) + ".jpg", rotated_image)
+        print('Number of frames of calibrated video: {0}'.format(int(video.get(cv2.CAP_PROP_FRAME_COUNT))))
 
-        data_frame = pd.DataFrame([
-            {'time': 0, 'x': x_positions[i], 'y': y_positions[i], 'radius': 56, 'idx_frame': i, 'u_idx': 0}
-            for i in range(len(images))])
+        rotate_code = Extractor.__check_rotation(calibrate_video_path)
+
+        while video.isOpened():
+            frame_exists, current_frame = video.read()
+            if frame_exists:
+                frames.append(Extractor.__correct_rotation(current_frame, rotate_code))
+            else:
+                break
+
+        data_frame = pd.DataFrame(columns=['time', 'x', 'y', 'radius', 'idx_frame', 'u_idx'])
+
+        for i, (x_pos, y_pos) in enumerate(zip(x_positions, y_positions)):
+            frame_range = FRAME_RANGE_LIST[i]
+
+            temp_df = pd.DataFrame([
+                {'time': 0, 'x': x_pos, 'y': y_pos, 'radius': 56, 'idx_frame': j, 'u_idx': 0}
+                for j in range(frame_range[0], frame_range[1])])
+
+            data_frame = data_frame.append(temp_df, ignore_index=True)
 
         data_frame['xPos'] = (data_frame['x'].astype(float) / 111.282844) - 1.82
         data_frame['yPos'] = -(data_frame['y'].astype(float) / 111.196911) - 0.28
@@ -76,7 +87,7 @@ class Extractor:
             labels[row['index']] = [row['xPos'], row['yPos']]
 
         DATA_FRAME = data_frame
-        FRAMES = ready_to_use_images
+        FRAMES = frames
 
         training_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(TRAINING_POINTS)), :]
         validation_data_frame = data_frame.loc[(data_frame['concat_xy'].isin(VALIDATION_POINTS)), :]
@@ -101,8 +112,7 @@ class Extractor:
 
         video = cv2.VideoCapture(video_path)
 
-        number_of_frames = int(video.get(cv2.CAP_PROP_FRAME_COUNT))
-        print('Number of frames of predicted video: ' + str(number_of_frames))
+        print('Number of frames of predicted video: {0}'.format(int(video.get(cv2.CAP_PROP_FRAME_COUNT))))
 
         rotate_code = Extractor.__check_rotation(video_path)
 
@@ -149,7 +159,6 @@ class Extractor:
     @staticmethod
     def __correct_rotation(frame, rotate_code):
         return cv2.rotate(frame, rotate_code)
-
 
 
 class Dataset(data.Dataset):
@@ -211,8 +220,6 @@ class Dataset(data.Dataset):
                       cv2.cvtColor(roi_left_eye, cv2.COLOR_BGR2RGB),
                       cv2.cvtColor(roi_right_eye, cv2.COLOR_BGR2RGB),
                       np.reshape(cv2.resize(face_grid, (25, 25)), -1)]
-
-            cv2.imwrite()
 
             return output
         except:

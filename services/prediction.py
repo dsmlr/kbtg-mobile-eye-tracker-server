@@ -22,8 +22,8 @@ def load_checkpoint(filename):
 
 def initialize_model(model, filename):
     model = torch.nn.DataParallel(model)
-    # model.cuda()
-    # torch.backends.cudnn.benchmark = True
+    model.cuda()
+    torch.backends.cudnn.benchmark = True
     saved = load_checkpoint(filename)
 
     if saved:
@@ -47,17 +47,17 @@ def extract_feature(val_loader, model):
     feature_list = list()
     act_list = list()
     for local_batch, local_labels in val_loader:
-        # imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        # imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        # imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        # faceGrid = (local_batch[3]).to(DEVICE).float().cuda()
-        # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
-        imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
-        imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
-        imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
-        faceGrid = (local_batch[3]).to(DEVICE).float()
-
-        gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
+        imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        faceGrid = (local_batch[3]).to(DEVICE).float().cuda()
+        gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
+        # imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
+        # imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
+        # imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
+        # faceGrid = (local_batch[3]).to(DEVICE).float()
+        #
+        # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
         imFace = Variable(imFace, requires_grad=False)
         imEyeL = Variable(imEyeL, requires_grad=False)
@@ -78,8 +78,8 @@ def extract_feature(val_loader, model):
 
 
 CHECKPOINTS_PATH = 'metadata'
-# DEVICE = torch.device('cuda:0')
-DEVICE = torch.device('cpu')
+DEVICE = torch.device('cuda:0')
+# DEVICE = torch.device('cpu')
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
 MODEL = ITrackerModel()
 initialize_model(MODEL, 'check_point_1.pth.tar')
@@ -107,8 +107,8 @@ class Predictor:
 
     @staticmethod
     def predict(test_generator):
-        # criterion = torch.nn.MSELoss().cuda()
-        criterion = torch.nn.MSELoss()
+        criterion = torch.nn.MSELoss().cuda()
+        # criterion = torch.nn.MSELoss()
 
         predictions, y = Predictor.__process_predict(test_generator, MODEL, criterion)
 
@@ -125,16 +125,16 @@ class Predictor:
         act_list = list()
 
         for local_batch, local_labels in val_loader:
-            # image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            # image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            # image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-            # face_grid = (local_batch[3]).to(DEVICE).float().cuda()
-            # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
-            image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
-            image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
-            image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
-            face_grid = (local_batch[3]).to(DEVICE).float()
-            gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
+            image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+            face_grid = (local_batch[3]).to(DEVICE).float().cuda()
+            gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
+            # image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
+            # image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
+            # image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
+            # face_grid = (local_batch[3]).to(DEVICE).float()
+            # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
             image_face = Variable(image_face, requires_grad=False)
             image_left_eye = Variable(image_left_eye, requires_grad=False)
@@ -177,8 +177,8 @@ class Calibrator:
     def calibrate(training_generator, validation_generator):
         global REGRO, REGR1
 
-        train_length = 5
-        valid_length = 4
+        train_length = 5 * 26
+        valid_length = 4 * 26
 
         search_range = [10.0 ** i for i in np.arange(-4, 5)]
         tuned_parameters = [{'kernel': ['rbf'], 'gamma': search_range, 'C': search_range},
@@ -233,7 +233,6 @@ class Calibrator:
         print("______________________________________")
         print("predictions validation_generator")
         print(predictions)
-
 
 
 class AverageMeter(object):

@@ -4,16 +4,18 @@ from flask import Flask, render_template
 from flask import request
 from werkzeug.utils import secure_filename
 
-from services.prediction import Calibrator, Predictor
+from services.prediction import Predictor, Calibrator
 from services.preparation import Extractor
 from services.video_processor import VideoProcessor
 
 FACES_FOLDER = './faces'
 SCREENS_FOLDER = './screens'
+CALIBRATE_FOLDER = './calibrate'
 
 app = Flask(__name__, static_folder='result')
 app.config['FACES_FOLDER'] = FACES_FOLDER
 app.config['SCREENS_FOLDER'] = SCREENS_FOLDER
+app.config['CALIBRATE_FOLDER'] = CALIBRATE_FOLDER
 
 SCREEN_VIDEO_PATH = None
 
@@ -25,17 +27,19 @@ def index():
 
 @app.route('/calibrate', methods=['POST'])
 def calibrate():
-    if 'image[]' not in request.files:
-        return {'message': 'No image in the request'}, 400
+    if 'video[]' not in request.files:
+        return {'message': 'No video in the request'}, 400
 
-    images = request.files.getlist('image[]')
     x_positions = request.form.get('xPositions').split(',')
     y_positions = request.form.get('yPositions').split(',')
 
-    print(x_positions, y_positions)
+    calibrate_video = request.files.getlist('video[]')[0]
+    calibrate_video_filename = secure_filename(calibrate_video.filename)
+    calibrate_video_path = os.path.join(app.config['CALIBRATE_FOLDER'], calibrate_video_filename)
+    calibrate_video.save(calibrate_video_path)
 
-    training_generator, validation_generator = Extractor.get_dataset_for_calibration(images, x_positions, y_positions)
-
+    training_generator, validation_generator = Extractor.get_dataset_for_calibration(calibrate_video_path, x_positions,
+                                                                                     y_positions)
     Calibrator.calibrate(training_generator, validation_generator)
 
     return {'message': 'Upload Successfully'}, 200

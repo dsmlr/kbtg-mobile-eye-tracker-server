@@ -5,8 +5,10 @@
 </head>
 <body>
 <h2>Result Video</h2>
-<a href="{{ url_for('static', filename = '2020-01-10_04-29-23_screen_normal.mp4') }}" download>
-    Download
-</a>
+<ul>
+    {% for video in results %}
+        <li><a href={{ url_for('static', filename=video) }}>{{ video }}</a></li>
+    {% endfor %}
+</ul>
 </body>
 </html>

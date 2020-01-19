@@ -11,7 +11,6 @@ from services.video_processor import VideoProcessor
 FACES_FOLDER = './faces'
 SCREENS_FOLDER = './screens'
 CALIBRATE_FOLDER = './calibrate'
-
 app = Flask(__name__, static_folder='result')
 app.config['FACES_FOLDER'] = FACES_FOLDER
 app.config['SCREENS_FOLDER'] = SCREENS_FOLDER
@@ -22,7 +21,10 @@ SCREEN_VIDEO_PATH = None
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    results = os.listdir('result')
+    results = [file for file in results if '.mp4' in file]
+
+    return render_template('index.html', results=results)
 
 
 @app.route('/calibrate', methods=['POST'])

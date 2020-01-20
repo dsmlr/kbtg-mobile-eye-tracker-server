@@ -1,5 +1,6 @@
 import os
 
+import torch
 from flask import Flask, render_template
 from flask import request
 from werkzeug.utils import secure_filename
@@ -25,6 +26,17 @@ def index():
     results = [file for file in results if '.mp4' in file]
 
     return render_template('index.html', results=results)
+
+
+@app.route('check-cuda')
+def check_cuda():
+    print(torch.cuda.current_device())
+    print(torch.cuda.device(0))
+    print(torch.cuda.device_count())
+    print(torch.cuda.get_device_name(0))
+    print(torch.cuda.is_available())
+
+    return {'message': 'Checking Successfully'}, 200
 
 
 @app.route('/calibrate', methods=['POST'])

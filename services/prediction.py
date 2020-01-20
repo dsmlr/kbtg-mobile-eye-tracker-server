@@ -56,7 +56,6 @@ def extract_feature(val_loader, model):
         # imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
         # imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float()
         # faceGrid = (local_batch[3]).to(DEVICE).float()
-        #
         # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
         imFace = Variable(imFace, requires_grad=False)

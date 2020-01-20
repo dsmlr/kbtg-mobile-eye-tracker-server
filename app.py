@@ -28,7 +28,7 @@ def index():
     return render_template('index.html', results=results)
 
 
-@app.route('check-cuda')
+@app.route('/check-cuda')
 def check_cuda():
     print(torch.cuda.current_device())
     print(torch.cuda.device(0))

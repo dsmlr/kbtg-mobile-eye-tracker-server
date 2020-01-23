@@ -1,5 +1,8 @@
 /.idea
-/uploads
+/calibrate
+/faces
+/result
+/screens
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

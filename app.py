@@ -39,6 +39,13 @@ def check_cuda():
     return {'message': 'Checking Successfully'}, 200
 
 
+@app.route('/test-predict')
+def test_predict():
+    VideoProcessor.process(None, None, 'test', [[1.4, -2.1], [1.5, -3.2], [1.6, -4.3]])
+
+    return {'message': 'Upload Successfully'}, 200
+
+
 @app.route('/calibrate', methods=['POST'])
 def calibrate():
     if 'video[]' not in request.files:
@@ -95,10 +102,10 @@ def predict():
     normal_result = Predictor.predict(test_generator)
     svr_result = Predictor.svr_predict(test_generator)
 
-    VideoProcessor.process(SCREEN_VIDEO_PATH, 'normal', normal_result)
-
     if svr_result is not None:
-        VideoProcessor.process(SCREEN_VIDEO_PATH, 'svr', svr_result)
+        VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'svr', svr_result)
+
+    VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'normal', normal_result)
 
     return {'message': 'Success'}, 200
 

@@ -192,6 +192,7 @@ class Dataset(data.Dataset):
             right_eye = cv2.resize(segmented[3], (224, 224)) - RIGHT_EYE_MEAN
             result = ([face / 255, left_eye / 255, right_eye / 255, segmented[4]])
         else:
+            print('Could not detect face in frame index ' + str(row['idx_frame']))
             result = [np.zeros((224, 224)), np.zeros((224, 224)), np.zeros((224, 224)), np.zeros(25 * 25)]
 
         label = self.labels[label_id]
@@ -205,7 +206,6 @@ class Dataset(data.Dataset):
 
         if len(detected_rectangle) == 0:
             # no component is detected
-            print("Failed")
             return Dataset.__empty_numpy_array(image)
 
         rectangle, face_boundary_box = Dataset.__find_largest_face(detected_rectangle)
@@ -225,8 +225,6 @@ class Dataset(data.Dataset):
 
             return output
         except:
-            print('Detection Failed')
-
             return Dataset.__empty_numpy_array()
 
     @staticmethod

@@ -70,7 +70,7 @@ class VideoProcessor:
             overlay_2std = frame.copy()
             overlay_3std = frame.copy()
 
-            adapted_x_mean = max(0, min(result.x_mean_p, 720))
+            adapted_x_mean = max(0, min(result.x_mean_px, 720))
             adapted_y_mean = max(0, min(result.y_mean_px, 1440))
 
             center_coordinates = (adapted_x_mean, adapted_y_mean)

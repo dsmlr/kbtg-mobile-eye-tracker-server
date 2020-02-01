@@ -76,12 +76,20 @@ def extract_feature(val_loader, model):
     return features, y
 
 
+def calculate_xy_error(act_x, predict_x, act_y, predict_y):
+    error_x = (act_x - predict_x) ** 2
+    error_y = (act_y - predict_y) ** 2
+    error = (error_x + error_y) ** 0.5
+
+    return error
+
+
 CHECKPOINTS_PATH = 'metadata'
 DEVICE = torch.device('cuda:0')
 # DEVICE = torch.device('cpu')
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
 MODEL = ITrackerModel()
-initialize_model(MODEL, 'check_point_1.pth.tar')
+initialize_model(MODEL, 'new_check_point.pth.tar')
 REGRO = None
 REGR1 = None
 
@@ -162,14 +170,6 @@ class Predictor:
 
         return predictions, y
 
-    @staticmethod
-    def __calculate_xy_error(act_x, predict_x, act_y, predict_y):
-        error_x = (act_x - predict_x) ** 2
-        error_y = (act_y - predict_y) ** 2
-        error = (error_x + error_y) ** 0.5
-
-        return error
-
 
 class Calibrator:
     @staticmethod
@@ -190,17 +190,6 @@ class Calibrator:
         features = np.concatenate([features1, features2], axis=0)
         y = np.concatenate([y1, y2], axis=0)
 
-        print("______________________________________")
-        print("y1")
-        print(y1)
-        print("______________________________________")
-        print("y2")
-        print(y2)
-        print("______________________________________")
-        print("features")
-        print(np.sum(features, axis=1))
-        print("______________________________________")
-
         REGRO = GridSearchCV(regr, tuned_parameters,
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGRO.fit(features, y[:, 0])
@@ -209,29 +198,21 @@ class Calibrator:
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGR1.fit(features, y[:, 1])
 
-        print("REGR0")
-        print(REGRO.best_estimator_)
-        print("______________________________________")
-        print("REGR1")
-        print(REGR1.best_estimator_)
-
         features, y = extract_feature(training_generator, MODEL)
         predictions = np.zeros((len(y[:, 0]), 2))
         predictions[:, 0] = REGRO.predict(features)
         predictions[:, 1] = REGR1.predict(features)
 
-        print("______________________________________")
-        print("predictions training_generator")
-        print(predictions)
+        ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
+        print('Training: ' + str(np.mean(ft_err_list)))
 
         features, y = extract_feature(validation_generator, MODEL)
         predictions = np.zeros((len(y[:, 0]), 2))
         predictions[:, 0] = REGRO.predict(features)
         predictions[:, 1] = REGR1.predict(features)
 
-        print("______________________________________")
-        print("predictions validation_generator")
-        print(predictions)
+        ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
+        print('Validation: ' + str(np.mean(ft_err_list)))
 
 
 class AverageMeter(object):

@@ -21,18 +21,9 @@ OPACITY_3STD = 0.2
 class VideoProcessor:
     @staticmethod
     def process(screen_video_path, face_video_path, tag, result):
-        if tag == 'test':
-            result_df = VideoProcessor.__get_result_data_frame(result)
-
-            print(result_df)
-
-            return
-
         result_df = VideoProcessor.__get_result_data_frame(result)
 
         print('Result video ({}) is processing...'.format(tag))
-        print(result)
-        print(result_df)
 
         VideoProcessor.__create_result_video(screen_video_path, face_video_path, tag, result_df)
 
@@ -79,7 +70,10 @@ class VideoProcessor:
             overlay_2std = frame.copy()
             overlay_3std = frame.copy()
 
-            center_coordinates = (result.x_mean_px, result.y_mean_px)
+            adapted_x_mean = max(0, min(result.x_mean_p, 720))
+            adapted_y_mean = max(0, min(result.y_mean_px, 1440))
+
+            center_coordinates = (adapted_x_mean, adapted_y_mean)
             axes_length_std = (result.x_std_px, result.y_std_px)
             axes_length_2std = (result.x_2std_px, result.y_2std_px)
             axes_length_3std = (result.x_3std_px, result.y_3std_px)

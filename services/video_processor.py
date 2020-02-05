@@ -10,7 +10,7 @@ DOT_RADIUS = 5
 THICKNESS_FILL = -1
 RESULT_VIDEO_DIMENSION = (480, 720)
 COMBINED_RESULT_VIDEO_DIMENSION = (840, 720)
-CODEC = cv2.VideoWriter_fourcc(*'vp80')
+CODEC = cv2.VideoWriter_fourcc(*'avc1')
 ANGLE = 0
 START_ANGLE = 0
 END_ANGLE = 360
@@ -32,8 +32,8 @@ class VideoProcessor:
     def __create_result_video(screen_video_path, face_video_path, tag, result_df):
         old_filename = screen_video_path.split('/')[-1].split('.')[0]
 
-        result_video_filename = '{}_{}.webm'.format(old_filename, tag)
-        combined_result_video_filename = '{}_{}_combined.webm'.format(old_filename, tag)
+        result_video_filename = '{}_{}.mp4'.format(old_filename, tag)
+        combined_result_video_filename = '{}_{}_combined.mp4'.format(old_filename, tag)
 
         result_video_path = os.path.join(RESULT_VIDEO_FOLDER, result_video_filename)
         combined_result_video_path = os.path.join(RESULT_VIDEO_FOLDER, combined_result_video_filename)

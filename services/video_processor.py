@@ -8,7 +8,7 @@ RESULT_VIDEO_FOLDER = './result'
 RED_COLOR = (0, 0, 255)
 DOT_RADIUS = 5
 THICKNESS_FILL = -1
-RESULT_VIDEO_DIMENSION = (480, 720)
+RESULT_VIDEO_DIMENSION = (360, 720)
 COMBINED_RESULT_VIDEO_DIMENSION = (840, 720)
 CODEC = cv2.VideoWriter_fourcc(*'avc1')
 ANGLE = 0
@@ -49,8 +49,8 @@ class VideoProcessor:
         print('Shape face video frame: ' + str(face_video_frame_list[0].shape))
 
         VideoProcessor.__apply_result_to_screen_video(screen_video_frame_list, result_df)
-        VideoProcessor.__get_result_video(screen_video_frame_list, result_video_path)
-        VideoProcessor.__combine_frame(screen_video_frame_list, face_video_frame_list, combined_result_video_path)
+        VideoProcessor.__get_result_video(screen_video_frame_list, face_video_frame_list, result_video_path,
+                                          combined_result_video_path)
 
     @staticmethod
     def __get_video_frame_list(video_path):
@@ -134,28 +134,24 @@ class VideoProcessor:
         return df
 
     @staticmethod
-    def __get_result_video(screen_video_frame_list, result_video_path):
-        output = cv2.VideoWriter(result_video_path, CODEC, 20.0, RESULT_VIDEO_DIMENSION)
-
-        for frame in screen_video_frame_list:
-            resized_frame = cv2.resize(frame, None, fx=0.5, fy=0.5)
-            output.write(resized_frame)
-
-        output.release()
-
-    @staticmethod
-    def __combine_frame(screen_video_frame_list, face_video_frame_list, combined_result_video_path):
-        output = cv2.VideoWriter(combined_result_video_path, CODEC, 20.0, COMBINED_RESULT_VIDEO_DIMENSION)
+    def __get_result_video(screen_video_frame_list, face_video_frame_list, result_video_path,
+                           combined_result_video_path):
+        result_output = cv2.VideoWriter(result_video_path, CODEC, 20.0, RESULT_VIDEO_DIMENSION)
+        combined_frame_output = cv2.VideoWriter(combined_result_video_path, CODEC, 20.0,
+                                                COMBINED_RESULT_VIDEO_DIMENSION)
 
         for screen_frame, face_frame in zip(screen_video_frame_list, face_video_frame_list):
             frame_1 = cv2.rotate(face_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
             frame_2 = cv2.resize(screen_frame, None, fx=0.5, fy=0.5)
+            print(frame_2.shape)
 
             combined_frame = np.zeros((720, 840, 3), dtype="uint8")
 
             combined_frame[0:720, 0:480] = frame_1
             combined_frame[0:720, 480:840] = frame_2
 
-            output.write(combined_frame)
+            result_output.write(frame_2)
+            combined_frame_output.write(combined_frame)
 
-        output.release()
+        result_output.release()
+        combined_frame_output.release()

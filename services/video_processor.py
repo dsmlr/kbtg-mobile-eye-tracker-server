@@ -8,7 +8,8 @@ RESULT_VIDEO_FOLDER = './result'
 RED_COLOR = (0, 0, 255)
 DOT_RADIUS = 5
 THICKNESS_FILL = -1
-VIDEO_DIMENSION = (840, 720)
+RESULT_VIDEO_DIMENSION = (480, 720)
+COMBINED_RESULT_VIDEO_DIMENSION = (840, 720)
 CODEC = cv2.VideoWriter_fourcc(*'avc1')
 ANGLE = 0
 START_ANGLE = 0
@@ -30,13 +31,17 @@ class VideoProcessor:
     @staticmethod
     def __create_result_video(screen_video_path, face_video_path, tag, result_df):
         old_filename = screen_video_path.split('/')[-1].split('.')[0]
-        new_filename = '{}_{}.mp4'.format(old_filename, tag)
-        result_video_path = os.path.join(RESULT_VIDEO_FOLDER, new_filename)
+
+        result_video_filename = '{}_{}.mp4'.format(old_filename, tag)
+        combined_result_video_filename = '{}_{}_combined.mp4'.format(old_filename, tag)
+
+        result_video_path = os.path.join(RESULT_VIDEO_FOLDER, result_video_filename)
+        combined_result_video_path = os.path.join(RESULT_VIDEO_FOLDER, combined_result_video_filename)
 
         screen_video_frame_list = VideoProcessor.__get_video_frame_list(screen_video_path)
         face_video_frame_list = VideoProcessor.__get_video_frame_list(face_video_path)
 
-        print('Result video path: ' + result_video_path)
+        print('Result video path: ' + combined_result_video_path)
         print('Number of frames in screen video: ' + str(len(screen_video_frame_list)))
         print('Number of frames in face video: ' + str(len(face_video_frame_list)))
         print('Result Length: ' + str(len(result_df.index)))
@@ -44,7 +49,8 @@ class VideoProcessor:
         print('Shape face video frame: ' + str(face_video_frame_list[0].shape))
 
         VideoProcessor.__apply_result_to_screen_video(screen_video_frame_list, result_df)
-        VideoProcessor.__combine_frame(screen_video_frame_list, face_video_frame_list, result_video_path)
+        VideoProcessor.__get_result_video(screen_video_frame_list, result_video_path)
+        VideoProcessor.__combine_frame(screen_video_frame_list, face_video_frame_list, combined_result_video_path)
 
     @staticmethod
     def __get_video_frame_list(video_path):
@@ -128,8 +134,18 @@ class VideoProcessor:
         return df
 
     @staticmethod
-    def __combine_frame(screen_video_frame_list, face_video_frame_list, result_video_path):
-        output = cv2.VideoWriter(result_video_path, CODEC, 20.0, VIDEO_DIMENSION)
+    def __get_result_video(screen_video_frame_list, result_video_path):
+        output = cv2.VideoWriter(result_video_path, CODEC, 20.0, RESULT_VIDEO_DIMENSION)
+
+        for frame in screen_video_frame_list:
+            resized_frame = cv2.resize(frame, None, fx=0.5, fy=0.5)
+            output.write(resized_frame)
+
+        output.release()
+
+    @staticmethod
+    def __combine_frame(screen_video_frame_list, face_video_frame_list, combined_result_video_path):
+        output = cv2.VideoWriter(combined_result_video_path, CODEC, 20.0, COMBINED_RESULT_VIDEO_DIMENSION)
 
         for screen_frame, face_frame in zip(screen_video_frame_list, face_video_frame_list):
             frame_1 = cv2.rotate(face_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)

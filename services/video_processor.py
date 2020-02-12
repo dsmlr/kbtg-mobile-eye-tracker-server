@@ -143,7 +143,6 @@ class VideoProcessor:
         for screen_frame, face_frame in zip(screen_video_frame_list, face_video_frame_list):
             frame_1 = cv2.rotate(face_frame, cv2.ROTATE_90_COUNTERCLOCKWISE)
             frame_2 = cv2.resize(screen_frame, None, fx=0.5, fy=0.5)
-            print(frame_2.shape)
 
             combined_frame = np.zeros((720, 840, 3), dtype="uint8")
 

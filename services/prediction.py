@@ -193,13 +193,20 @@ class Calibrator:
         features = np.concatenate([features1, features2], axis=0)
         y = np.concatenate([y1, y2], axis=0)
 
+        print("Before grid search R0 timestamp:", time.time())
+
         REGRO = GridSearchCV(regr, tuned_parameters,
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGRO.fit(features, y[:, 0])
 
+        print("After grid search R0 timestamp:", time.time())
+        print("Before grid search R1 timestamp:", time.time())
+
         REGR1 = GridSearchCV(regr, tuned_parameters,
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGR1.fit(features, y[:, 1])
+
+        print("After grid search R1 timestamp:", time.time())
 
         # ___________________________________________________________________
 

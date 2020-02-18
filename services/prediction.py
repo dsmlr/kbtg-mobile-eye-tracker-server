@@ -206,23 +206,21 @@ class Calibrator:
         print("After fit the parameter timestamp:", time.time())
         print("Before extract feature training generator timestamp:", time.time())
 
-        features, y = extract_feature(training_generator, MODEL)
-        predictions = np.zeros((len(y[:, 0]), 2))
-        predictions[:, 0] = REGRO.predict(features)
-        predictions[:, 1] = REGR1.predict(features)
+        predictions = np.zeros((len(y1[:, 0]), 2))
+        predictions[:, 0] = REGRO.predict(features1)
+        predictions[:, 1] = REGR1.predict(features1)
 
-        ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
+        ft_err_list = calculate_xy_error(y1[:, 0], predictions[:, 0], y1[:, 1], predictions[:, 1])
         print('Training: ' + str(np.mean(ft_err_list)))
 
         print("After extract feature training generator timestamp:", time.time())
         print("Before extract feature validation generator timestamp:", time.time())
 
-        features, y = extract_feature(validation_generator, MODEL)
-        predictions = np.zeros((len(y[:, 0]), 2))
-        predictions[:, 0] = REGRO.predict(features)
-        predictions[:, 1] = REGR1.predict(features)
+        predictions = np.zeros((len(y2[:, 0]), 2))
+        predictions[:, 0] = REGRO.predict(features2)
+        predictions[:, 1] = REGR1.predict(features2)
 
-        ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
+        ft_err_list = calculate_xy_error(y2[:, 0], predictions[:, 0], y2[:, 1], predictions[:, 1])
         print('Validation: ' + str(np.mean(ft_err_list)))
 
         print("After extract feature validation generator timestamp:", time.time())

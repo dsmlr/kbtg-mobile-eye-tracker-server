@@ -180,8 +180,6 @@ class Dataset(data.Dataset):
         """Generates one sample of data"""
         # Select sample
 
-        print("Index:", index, "Before generated item timestamp:", time.time())
-
         label_id = self.list_id[index]
 
         # Load data and get label
@@ -200,8 +198,6 @@ class Dataset(data.Dataset):
             result = [np.zeros((224, 224)), np.zeros((224, 224)), np.zeros((224, 224)), np.zeros(25 * 25)]
 
         label = self.labels[label_id]
-
-        print("Index:", index, "After generated item timestamp:", time.time())
 
         return result, label
 

@@ -1,5 +1,6 @@
 import copy
 import os
+import time
 
 import numpy as np
 import torch
@@ -176,6 +177,8 @@ class Calibrator:
     def calibrate(training_generator, validation_generator):
         global REGRO, REGR1
 
+        print("Before fit the parameter timestamp:", time.time())
+
         train_length = 5 * 26
         valid_length = 4 * 26
 
@@ -198,6 +201,11 @@ class Calibrator:
                              cv=[(np.arange(train_length), np.arange(train_length, train_length + valid_length))])
         REGR1.fit(features, y[:, 1])
 
+        # ___________________________________________________________________
+
+        print("After fit the parameter timestamp:", time.time())
+        print("Before extract feature training generator timestamp:", time.time())
+
         features, y = extract_feature(training_generator, MODEL)
         predictions = np.zeros((len(y[:, 0]), 2))
         predictions[:, 0] = REGRO.predict(features)
@@ -206,6 +214,9 @@ class Calibrator:
         ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
         print('Training: ' + str(np.mean(ft_err_list)))
 
+        print("After extract feature training generator timestamp:", time.time())
+        print("Before extract feature validation generator timestamp:", time.time())
+
         features, y = extract_feature(validation_generator, MODEL)
         predictions = np.zeros((len(y[:, 0]), 2))
         predictions[:, 0] = REGRO.predict(features)
@@ -213,6 +224,8 @@ class Calibrator:
 
         ft_err_list = calculate_xy_error(y[:, 0], predictions[:, 0], y[:, 1], predictions[:, 1])
         print('Validation: ' + str(np.mean(ft_err_list)))
+
+        print("After extract feature validation generator timestamp:", time.time())
 
 
 class AverageMeter(object):

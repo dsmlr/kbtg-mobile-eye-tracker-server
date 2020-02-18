@@ -1,5 +1,4 @@
 import os
-import time
 
 import torch
 from flask import Flask, render_template
@@ -60,15 +59,9 @@ def calibrate():
     calibrate_video_path = os.path.join(app.config['CALIBRATE_FOLDER'], calibrate_video_filename)
     calibrate_video.save(calibrate_video_path)
 
-    print('Before dataset preparation:', time.time())
-
     training_generator, validation_generator = Extractor.get_dataset_for_calibration(calibrate_video_path, x_positions,
                                                                                      y_positions)
-    print('After dataset preparation:', time.time())
-
     Calibrator.calibrate(training_generator, validation_generator)
-
-    print('After calibration:', time.time())
 
     return {'message': 'Upload Successfully'}, 200
 

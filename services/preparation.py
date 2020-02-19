@@ -1,6 +1,5 @@
 import os
 import pickle
-import time
 
 import cv2
 import dlib

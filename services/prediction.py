@@ -104,12 +104,20 @@ class Predictor:
             print('Please calibrate before using the SVR prediction')
             return None
 
+        print('Start feature extraction.')
+
         features, y = extract_feature(test_generator, MODEL)
+
+        print('Feature extraction complete.')
+        print('Start prediction.')
+
         predictions = np.zeros((len(y[:, 0]), 2))
         predictions[:, 0] = REGRO.predict(features)
 
         features, y = extract_feature(test_generator, MODEL)
         predictions[:, 1] = REGR1.predict(features)
+
+        print('prediction complete.')
 
         return predictions
 

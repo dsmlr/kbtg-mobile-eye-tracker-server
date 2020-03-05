@@ -99,13 +99,15 @@ def predict():
 
     test_generator = Extractor.extract_frames_from_video(face_video_path)
 
-    normal_result = Predictor.predict(test_generator)
+    # normal_result = Predictor.predict(test_generator)
     svr_result = Predictor.svr_predict(test_generator)
+
+    print(SCREEN_VIDEO_PATH)
 
     if svr_result is not None:
         VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'svr', svr_result)
 
-    VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'normal', normal_result)
+    # VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'normal', normal_result)
 
     return {'message': 'Success'}, 200
 

@@ -1,6 +1,5 @@
 import os
 
-import torch
 from flask import Flask, render_template
 from flask import request
 from werkzeug.utils import secure_filename
@@ -17,6 +16,7 @@ app.config['FACES_FOLDER'] = FACES_FOLDER
 app.config['SCREENS_FOLDER'] = SCREENS_FOLDER
 app.config['CALIBRATE_FOLDER'] = CALIBRATE_FOLDER
 
+IS_CALIBRATE = False
 SCREEN_VIDEO_PATH = None
 
 
@@ -28,28 +28,26 @@ def index():
     return render_template('index.html', results=results)
 
 
-@app.route('/check-cuda')
-def check_cuda():
-    print(torch.cuda.current_device())
-    print(torch.cuda.device(0))
-    print(torch.cuda.device_count())
-    print(torch.cuda.get_device_name(0))
-    print(torch.cuda.is_available())
+@app.route('/check-status')
+def check_calibration_status():
+    global IS_CALIBRATE
 
-    return {'message': 'Checking Successfully'}, 200
+    print('IS_CALIBRATE =', IS_CALIBRATE)
 
-
-@app.route('/test-predict')
-def test_predict():
-    VideoProcessor.process(None, None, 'test', [[1.4, -2.1], [1.5, -3.2], [1.6, -4.3]])
-
-    return {'message': 'Upload Successfully'}, 200
+    if IS_CALIBRATE:
+        return {'status': 'true'}, 200
+    else:
+        return {'status': 'false'}, 200
 
 
 @app.route('/calibrate', methods=['POST'])
 def calibrate():
+    global IS_CALIBRATE
+
     if 'video[]' not in request.files:
         return {'message': 'No video in the request'}, 400
+
+    IS_CALIBRATE = False
 
     x_positions = request.form.get('xPositions').split(',')
     y_positions = request.form.get('yPositions').split(',')
@@ -62,6 +60,9 @@ def calibrate():
     training_generator, validation_generator = Extractor.get_dataset_for_calibration(calibrate_video_path, x_positions,
                                                                                      y_positions)
     Calibrator.calibrate(training_generator, validation_generator)
+
+    IS_CALIBRATE = True
+    print('Changed status IS_CALIBRATE to', IS_CALIBRATE)
 
     return {'message': 'Upload Successfully'}, 200
 
@@ -99,15 +100,12 @@ def predict():
 
     test_generator = Extractor.extract_frames_from_video(face_video_path)
 
-    # normal_result = Predictor.predict(test_generator)
     svr_result = Predictor.svr_predict(test_generator)
 
     print(SCREEN_VIDEO_PATH)
 
     if svr_result is not None:
         VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'svr', svr_result)
-
-    # VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'normal', normal_result)
 
     return {'message': 'Success'}, 200
 

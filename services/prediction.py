@@ -48,10 +48,10 @@ def extract_feature(val_loader, model):
     feature_list = list()
     act_list = list()
     for local_batch, local_labels in val_loader:
-        imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        imEyeR = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
-        faceGrid = (local_batch[3]).to(DEVICE).float().cuda()
+        image_face = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        image_left_eye = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        image_right_eye = (local_batch[2]).to(DEVICE).permute(0, 3, 1, 2).float().cuda()
+        face_grid = (local_batch[3]).to(DEVICE).float().cuda()
         gaze = torch.t(torch.stack(local_labels).to(DEVICE).float()).cuda()
         # imFace = (local_batch[0]).to(DEVICE).permute(0, 3, 1, 2).float()
         # imEyeL = (local_batch[1]).to(DEVICE).permute(0, 3, 1, 2).float()
@@ -59,15 +59,15 @@ def extract_feature(val_loader, model):
         # faceGrid = (local_batch[3]).to(DEVICE).float()
         # gaze = torch.t(torch.stack(local_labels).to(DEVICE).float())
 
-        imFace = Variable(imFace, requires_grad=False)
-        imEyeL = Variable(imEyeL, requires_grad=False)
-        imEyeR = Variable(imEyeR, requires_grad=False)
-        faceGrid = Variable(faceGrid, requires_grad=False)
+        image_face = Variable(image_face, requires_grad=False)
+        image_left_eye = Variable(image_left_eye, requires_grad=False)
+        image_right_eye = Variable(image_right_eye, requires_grad=False)
+        face_grid = Variable(face_grid, requires_grad=False)
         gaze = Variable(gaze, requires_grad=False)
 
         # compute output
         with torch.no_grad():
-            output = feature_extraction_model(imFace, imEyeL, imEyeR, faceGrid)
+            output = feature_extraction_model(image_face, image_left_eye, image_right_eye, face_grid)
 
         feature_list.append(output.cpu().numpy())
         act_list.append(gaze.cpu().numpy())
@@ -86,8 +86,8 @@ def calculate_xy_error(act_x, predict_x, act_y, predict_y):
 
 
 CHECKPOINTS_PATH = 'metadata'
-DEVICE = torch.device('cuda:0')
-# DEVICE = torch.device('cpu')
+# DEVICE = torch.device('cuda:0')
+DEVICE = torch.device('cpu')
 PARAMS = {'batch_size': 20, 'shuffle': False, 'num_workers': 2}
 MODEL = ITrackerModel()
 initialize_model(MODEL, 'new_check_point.pth.tar')

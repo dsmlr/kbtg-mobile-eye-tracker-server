@@ -45,7 +45,7 @@ def calibrate():
     global IS_CALIBRATE
 
     if 'video[]' not in request.files:
-        return {'status': 'No video in the request'}, 400
+        return {'status': 'video_not_found'}, 400
 
     IS_CALIBRATE = False
 
@@ -72,7 +72,7 @@ def save_screen_video():
     global SCREEN_VIDEO_PATH
 
     if 'video[]' not in request.files:
-        return {'message': 'No video in the request'}, 400
+        return {'status': 'video_not_found'}, 400
 
     videos = request.files.getlist('video[]')
 
@@ -89,7 +89,7 @@ def predict():
     global SCREEN_VIDEO_PATH
 
     if 'video[]' not in request.files:
-        return {'message': 'No video in the request'}, 400
+        return {'status': 'video_not_found'}, 400
 
     videos = request.files.getlist('video[]')
 
@@ -107,7 +107,7 @@ def predict():
     if svr_result is not None:
         VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'svr', svr_result)
 
-    return {'status': 'Success'}, 200
+    return {'status': 'success'}, 200
 
 
 if __name__ == '__main__':

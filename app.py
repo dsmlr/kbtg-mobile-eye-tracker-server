@@ -45,7 +45,7 @@ def calibrate():
     global IS_CALIBRATE
 
     if 'video[]' not in request.files:
-        return {'message': 'No video in the request'}, 400
+        return {'status': 'No video in the request'}, 400
 
     IS_CALIBRATE = False
 
@@ -64,7 +64,7 @@ def calibrate():
     IS_CALIBRATE = True
     print('Changed status IS_CALIBRATE to', IS_CALIBRATE)
 
-    return {'message': 'Upload Successfully'}, 200
+    return {'status': 'success'}, 200
 
 
 @app.route('/save-screen-video', methods=['POST'])
@@ -81,7 +81,7 @@ def save_screen_video():
     SCREEN_VIDEO_PATH = os.path.join(app.config['SCREENS_FOLDER'], screen_video_filename)
     screen_video.save(SCREEN_VIDEO_PATH)
 
-    return {'message': 'Upload Successfully'}, 200
+    return {'status': 'upload_success'}, 200
 
 
 @app.route('/predict', methods=['POST'])
@@ -107,7 +107,7 @@ def predict():
     if svr_result is not None:
         VideoProcessor.process(SCREEN_VIDEO_PATH, face_video_path, 'svr', svr_result)
 
-    return {'message': 'Success'}, 200
+    return {'status': 'Success'}, 200
 
 
 if __name__ == '__main__':
